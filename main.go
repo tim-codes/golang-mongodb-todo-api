@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("Starting mongo todo app...")
 
 	// Set client options
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27011,localhost:27012,localhost:27013/playments-playground?replicaSet=rs0")
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27011,localhost:27012,localhost:27013/todos?replicaSet=rs0")
 
 	// Connect to MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)
