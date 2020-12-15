@@ -4,10 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+var client mongo.Client
+var todosCollection mongo.Collection
 
 func main() {
 	fmt.Println("Starting mongo todo app...")
@@ -27,5 +32,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	todosCollection := client.Database("test").Collection("todos")
+
 	fmt.Println("Connected to MongoDB!")
+
+	router := NewRouter()
+	fmt.Println("Starting HTTP Server on :8080")
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
+
+type Todo struct {
+	Name      string    `json:"name"`
+	Completed bool      `json:"completed"`
+	Due       time.Time `json:"due"`
+	Created   time.Time `json:"created"`
+	Updated   time.Time `json:"updated"`
+}
+
+type Todos []Todo
