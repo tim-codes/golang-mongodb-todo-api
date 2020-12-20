@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,7 +23,7 @@ func CreateRouter(collections *AppCollections) *mux.Router {
 	r.Methods("GET").Path("/todos").HandlerFunc(FetchTodosHandler(collections))
 	r.Methods("POST").Path("/todos").HandlerFunc(AddTodoHandler(collections))
 	r.Methods("PATCH").Path("/todos").HandlerFunc(UpdateTodoHandler(collections))
-	r.Methods("DELETE").Path("/todos").HandlerFunc(DeleteTodoHandler(collections))
+	r.Methods("DELETE").Path("/todos/{id}").HandlerFunc(DeleteTodoHandler(collections))
 
 	return r
 }
@@ -126,6 +127,42 @@ func UpdateTodoHandler(collections *AppCollections) func(w http.ResponseWriter, 
 	return func(w http.ResponseWriter, r *http.Request) {}
 }
 
+type DeleteTodoPayload struct {
+	ID string `json:"id"`
+}
+
+type DeleteTodoResponse struct {
+	ID string `json:"id"`
+}
+
 func DeleteTodoHandler(collections *AppCollections) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		payload := &DeleteTodoPayload{}
+		payload.ID = mux.Vars(r)["id"]
+		var deleteResult *mongo.DeleteResult
+
+		filter := map[string]string{"_id": payload.ID}
+
+		deleteResult, err = collections.todos.DeleteOne(context.TODO(), filter)
+		if err != nil {
+			log.Printf("Error deleting item: %s", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if deleteResult.DeletedCount == 0 {
+			err = errors.New("deleted count is 0")
+			log.Printf("Error deleting item: %s", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(DeleteTodoResponse{payload.ID})
+		if err != nil {
+			log.Printf("Encode JSON response error: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 }
